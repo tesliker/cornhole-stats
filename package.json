@@ -1,7 +1,7 @@
 {
   "name": "cornhole-stats",
   "version": "0.1.0",
-  "homepage": "https://tesliker.github.io/react-gh-pages",
+  "homepage": "https://tesliker.github.io/cornhole-stats",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.8.2",
