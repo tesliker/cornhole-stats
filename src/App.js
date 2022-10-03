@@ -272,6 +272,8 @@ class App extends Component {
               <MenuItem value={8}>2023</MenuItem>
               <MenuItem value={7}>2022</MenuItem>
               <MenuItem value={6}>2021</MenuItem>
+              <MenuItem value={5}>2020</MenuItem>
+              <MenuItem value={4}>2019</MenuItem>
             </Select>
             <RadioGroup
               row
@@ -323,7 +325,8 @@ const players = [
   '162970',
   '166212',
   '170187',
-  '169437'
+  '169437',
+  '52156'
 ];
 
 export default App;
