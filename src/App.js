@@ -48,9 +48,11 @@ class App extends Component {
         fetch('https://acl-api-server.azurewebsites.net/api/v1/yearly-player-stats/' + players[i]  + '?bucketID=' + this.state.selectVal)
           .then(results => results.json())
           .then(data => {
-            this.setState(prevState => ({
-              playerData: [...prevState.playerData, data.data]
-            }))
+            if (data.data.playerPerformanceStats.ptsPerRnd) {
+              this.setState(prevState => ({
+                playerData: [...prevState.playerData, data.data]
+              }))
+            }
           }).catch(err => console.log(err))
       }
     }
