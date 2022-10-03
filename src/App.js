@@ -13,6 +13,8 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Radio from '@mui/material/Radio';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormControl from '@mui/material/FormControl';
@@ -21,17 +23,36 @@ import FormLabel from '@mui/material/FormLabel';
 
 
 class App extends Component {
-  state = { playerData: [], radioVal: 'ppr' };
+  state = { playerData: [], radioVal: 'ppr', selectVal: 8};
 
   componentDidMount() {
     for (let i = 0; i < players.length; i++) {
-      fetch('https://acl-api-server.azurewebsites.net/api/v1/yearly-player-stats/' + players[i]  + '?bucketID=7')
+      fetch('https://acl-api-server.azurewebsites.net/api/v1/yearly-player-stats/' + players[i]  + '?bucketID=' + this.state.selectVal)
         .then(results => results.json())
         .then(data => {
-          this.setState(prevState => ({
-            playerData: [...prevState.playerData, data.data]
-          }))
+          if (data.data.playerPerformanceStats.ptsPerRnd) {
+            this.setState(prevState => ({
+              playerData: [...prevState.playerData, data.data]
+            }))
+          }
         }).catch(err => console.log(err))
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.selectVal !== this.state.selectVal) {
+      this.setState(prevState => ({
+        playerData: []
+      }))
+      for (let i = 0; i < players.length; i++) {
+        fetch('https://acl-api-server.azurewebsites.net/api/v1/yearly-player-stats/' + players[i]  + '?bucketID=' + this.state.selectVal)
+          .then(results => results.json())
+          .then(data => {
+            this.setState(prevState => ({
+              playerData: [...prevState.playerData, data.data]
+            }))
+          }).catch(err => console.log(err))
+      }
     }
   }
 
@@ -67,6 +88,10 @@ class App extends Component {
 
   handleRadioChange = (event) => {
     this.setState({radioVal: event.target.value})
+  }
+
+  handleSelectChange = (event) => {
+    this.setState({selectVal: event.target.value})
   }
 
   subHeading(data) {
@@ -237,6 +262,17 @@ class App extends Component {
           </AppBar>
 
           <FormControl className={'SortPPR'}>
+            <Select
+              labelId="year-label"
+              id="year"
+              value={this.state.selectVal}
+              label="Year"
+              onChange={this.handleSelectChange}
+            >
+              <MenuItem value={8}>2023</MenuItem>
+              <MenuItem value={7}>2022</MenuItem>
+              <MenuItem value={6}>2021</MenuItem>
+            </Select>
             <RadioGroup
               row
               defaultValue="ppr"
@@ -276,7 +312,17 @@ const players = [
   '145970',
   '5519',
   '145602',
-  '130317'
+  '130317',
+  '104679',
+  '142118',
+  '165630',
+  '161741',
+  '135333',
+  '171043',
+  '171407',
+  '162970',
+  '166212',
+  '170187'
 ];
 
 export default App;
