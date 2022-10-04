@@ -204,7 +204,7 @@ class App extends Component {
                 <MenuIcon/>
               </IconButton>
               <Typography variant="h6" component="div" sx={{flexGrow: 1}}>
-                ACL Cornhole stats
+                ACL Open Rankings
               </Typography>
             </Toolbar>
           </AppBar>
