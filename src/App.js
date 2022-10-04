@@ -27,42 +27,25 @@ class App extends Component {
 
   componentDidMount() {
     for (let i = 0; i < players.length; i++) {
-      fetch('https://acl-api-server.azurewebsites.net/api/v1/yearly-player-stats/' + players[i]  + '?bucketID=' + this.state.selectVal)
+      fetch('https://acl-api-server.azurewebsites.net/api/v1/acl-standings/player-id/' + players[i]  + '?bucket_id=' + this.state.selectVal)
         .then(results => results.json())
         .then(data => {
-          if (data.data.playerPerformanceStats.ptsPerRnd) {
-            this.setState(prevState => ({
-              playerData: [...prevState.playerData, data.data]
-            }))
+          if (data.status === 'OK') {
+            if (data.playerACLStandingsList[0].playerFirstName) {
+              this.setState(prevState => ({
+                playerData: [...prevState.playerData, data]
+              }))
+            }
           }
         }).catch(err => console.log(err))
     }
   }
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.selectVal !== this.state.selectVal) {
-      this.setState(prevState => ({
-        playerData: []
-      }))
-      for (let i = 0; i < players.length; i++) {
-        fetch('https://acl-api-server.azurewebsites.net/api/v1/yearly-player-stats/' + players[i]  + '?bucketID=' + this.state.selectVal)
-          .then(results => results.json())
-          .then(data => {
-            if (data.data.playerPerformanceStats.ptsPerRnd) {
-              this.setState(prevState => ({
-                playerData: [...prevState.playerData, data.data]
-              }))
-            }
-          }).catch(err => console.log(err))
-      }
-    }
-  }
-
   comparePPR(a,b) {
-    if ( a.playerPerformanceStats.ptsPerRnd > b.playerPerformanceStats.ptsPerRnd ){
+    if ( a.playerACLStandingsList[0].playerOverAllTotal > b.playerACLStandingsList[0].playerOverAllTotal ){
       return -1;
     }
-    if ( a.playerPerformanceStats.ptsPerRnd < b.playerPerformanceStats.ptsPerRnd ){
+    if ( a.playerACLStandingsList[0].playerOverAllTotal < b.playerACLStandingsList[0].playerOverAllTotal ){
       return 1;
     }
     return 0;
@@ -98,16 +81,16 @@ class App extends Component {
 
   subHeading(data) {
     if (this.state.radioVal === 'ppr') {
-      return '(' + data.playerPerformanceStats.ptsPerRnd + ' PPR)';
+      return '(' + data.playerACLStandingsList[0].playerOverAllTotal + ' Total Points)';
     }
-
-    if (this.state.radioVal === 'wins') {
-      return '(' + data.playerWinLossStats.winPct + '% Win)';
-    }
-
-    if (this.state.radioVal === 'diff') {
-      return '(' + data.playerPerformanceStats.diffPerRnd + ' Diff)';
-    }
+    //
+    // if (this.state.radioVal === 'wins') {
+    //   return '(' + data.playerWinLossStats.winPct + '% Win)';
+    // }
+    //
+    // if (this.state.radioVal === 'diff') {
+    //   return '(' + data.playerPerformanceStats.diffPerRnd + ' Diff)';
+    // }
   }
 
   render() {
@@ -132,110 +115,73 @@ class App extends Component {
     for (let i = 0; i < this.state.playerData.length; i++) {
 
     }*/
-    const playerMarkup = this.state.playerData.map((data) =>
+    const playerMarkup = this.state.playerData.map((data, i) =>
       <Accordion>
         <AccordionSummary
         expandIcon={<ExpandMoreIcon/>}
         aria-controls="panel1a-content"
         id="panel1a-header"
           >
-          <Typography>{data.playerPerformanceStats.playerFirstName} {data.playerPerformanceStats.playerLastName} <span>{this.subHeading(data)}</span></Typography>
+          <Typography>{i + 1}. {data.playerACLStandingsList[0].playerFirstName} {data.playerACLStandingsList[0].playerLastName} <span>{this.subHeading(data)}</span></Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Typography variant="h4" gutterBottom>
-            PERFORMANCE STATS
+            Player ACL Points Breakdown
           </Typography>
           <div className={'stat'}>
             <Typography>
-              PPR
+              Local Pts
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.ptsPerRnd}
+              {data.playerACLStandingsList[0].localTotalPoints}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              OPPR
+              Regional Pts
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.opponentPtsPerRnd}
+              {data.playerACLStandingsList[0].regionalTotalPoints}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              Pt. Diff.
+              Conference Pts
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.diffPerRnd}
+              {data.playerACLStandingsList[0].conferenceTotalPoints}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              Bags In %
+              Open Pts
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.BagsInPct}
+              {data.playerACLStandingsList[0].openTotalPoints}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              Bags On %
+              Member Bonus
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.BagsOnPct}
+              {data.playerACLStandingsList[0].playerMembershipBonus}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              Bags Off %
+              Conference Bonus
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.BagsOffPct}
+              {data.playerACLStandingsList[0].conferenceBonusPoints}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              4 Bagger %
+              Total Points
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.fourBaggerPct}
-            </Typography>
-          </div>
-
-          <Typography variant="h4" gutterBottom>
-            WIN / LOSS STATS
-          </Typography>
-
-          <div className={'stat'}>
-            <Typography>
-              Total Wins
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerWinLossStats.totalWins}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Total Losses
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerWinLossStats.totalLosses}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Total Games
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerWinLossStats.totalGames}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Win %
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerWinLossStats.winPct}
+              {data.playerACLStandingsList[0].playerOverAllTotal}
             </Typography>
           </div>
 
@@ -285,9 +231,7 @@ class App extends Component {
               value={this.state.radioVal}
               onChange={this.handleRadioChange}
             >
-              <FormControlLabel value="ppr" control={<Radio />} label="PPR" />
-              <FormControlLabel value="wins" control={<Radio />} label="Win %" />
-              <FormControlLabel value="diff" control={<Radio />} label="Diff" />
+              <FormControlLabel value="ppr" control={<Radio />} label="Point total" />
             </RadioGroup>
           </FormControl>
 
@@ -299,37 +243,261 @@ class App extends Component {
 }
 
 const players = [
-  '70632',
-  '118664',
-  '142869',
-  '66099',
-  '144225',
-  '46251',
-  '108127',
-  '117254',
-  '144776',
-  '130843',
-  '120964',
-  '60597',
-  '30964',
-  '142119',
-  '145970',
-  '5519',
-  '145602',
-  '130317',
-  '104679',
-  '142118',
-  '165630',
-  '161741',
-  '135333',
-  '171043',
-  '171407',
-  '162970',
-  '166212',
-  '170187',
-  '169437',
-  '52156',
-  '166323'
+  "8932",
+  "10634",
+  "56620",
+  "110871",
+  "53793",
+  "22427",
+  "27791",
+  "5394",
+  "12961",
+  "8860",
+  "2097",
+  "118664",
+  "21919",
+  "13318",
+  "114046",
+  "10757",
+  "40906",
+  "56462",
+  "129590",
+  "136646",
+  "55544",
+  "9609",
+  "58566",
+  "10755",
+  "113248",
+  "117368",
+  "3792",
+  "23834",
+  "3713",
+  "70632",
+  "55065",
+  "3693",
+  "36108",
+  "68720",
+  "47601",
+  "68759",
+  "23963",
+  "14886",
+  "20225",
+  "102484",
+  "69111",
+  "64634",
+  "24908",
+  "111664",
+  "26346",
+  "30447",
+  "104029",
+  "9837",
+  "125131",
+  "68899",
+  "10627",
+  "9768",
+  "9354",
+  "142242",
+  "5861",
+  "112615",
+  "23194",
+  "46805",
+  "148230",
+  "63723",
+  "114539",
+  "100295",
+  "144711",
+  "62093",
+  "568",
+  "130983",
+  "5309",
+  "10167",
+  "39249",
+  "6921",
+  "43379",
+  "9551",
+  "101711",
+  "5977",
+  "114909",
+  "3423",
+  "4519",
+  "14235",
+  "68504",
+  "14913",
+  "7028",
+  "135870",
+  "25477",
+  "52722",
+  "104040",
+  "102686",
+  "5664",
+  "61459",
+  "121938",
+  "8324",
+  "5988",
+  "58606",
+  "55203",
+  "70337",
+  "110754",
+  "1833",
+  "106379",
+  "8275",
+  "65633",
+  "113339",
+  "27319",
+  "65605",
+  "46816",
+  "9355",
+  "68516",
+  "5385",
+  "19134",
+  "115356",
+  "62119",
+  "118222",
+  "44611",
+  "70130",
+  "137620",
+  "133034",
+  "22851",
+  "143693",
+  "146437",
+  "69937",
+  "113258",
+  "170206",
+  "46800",
+  "19200",
+  "7175",
+  "113184",
+  "124609",
+  "46405",
+  "113544",
+  "67879",
+  "10128",
+  "2813",
+  "104369",
+  "7905",
+  "30312",
+  "9007",
+  "23654",
+  "112559",
+  "121931",
+  "101458",
+  "13750",
+  "22728",
+  "7969",
+  "10771",
+  "20037",
+  "106803",
+  "54608",
+  "50333",
+  "102010",
+  "38380",
+  "5807",
+  "52206",
+  "2425",
+  "41341",
+  "29018",
+  "114157",
+  "1826",
+  "60608",
+  "20758",
+  "133165",
+  "9101",
+  "103780",
+  "116429",
+  "105998",
+  "24147",
+  "4645",
+  "54009",
+  "106005",
+  "29736",
+  "66734",
+  "100681",
+  "47371",
+  "36148",
+  "28672",
+  "47313",
+  "3767",
+  "30388",
+  "111064",
+  "110384",
+  "130938",
+  "68826",
+  "36983",
+  "132956",
+  "135871",
+  "26700",
+  "7805",
+  "25616",
+  "127908",
+  "118286",
+  "116036",
+  "111234",
+  "114572",
+  "16472",
+  "2069",
+  "101282",
+  "3695",
+  "8703",
+  "3185",
+  "18389",
+  "20327",
+  "65651",
+  "9607",
+  "126857",
+  "45629",
+  "2210",
+  "27790",
+  "6016",
+  "60923",
+  "38602",
+  "8870",
+  "5374",
+  "57534",
+  "66730",
+  "29142",
+  "40848",
+  "110790",
+  "32964",
+  "20353",
+  "12470",
+  "12985",
+  "29102",
+  "13876",
+  "105465",
+  "129206",
+  "21875",
+  "8975",
+  "25619",
+  "44855",
+  "140876",
+  "16352",
+  "49059",
+  "105987",
+  "21241",
+  "100185",
+  "2632",
+  "5410",
+  "55262",
+  "10377",
+  "123404",
+  "44391",
+  "121314",
+  "25272",
+  "131336",
+  "132762",
+  "47412",
+  "126101",
+  "474",
+  "9709",
+  "4161",
+  "100572",
+  "129478",
+  "26695",
+  "47301",
+  "64643",
+  "101284",
+  "57487",
+  "68184"
 ];
 
 export default App;
