@@ -153,7 +153,7 @@ class App extends Component {
           let topPlayers = [];
           var allPlayers = data.playerACLStandingsList;
           for (let i = 0; i < allPlayers.length; i++) {
-            if (i < 250) {
+            if (i < 351) {
               topPlayers.push(allPlayers[i]);
             }
           }
@@ -234,7 +234,7 @@ class App extends Component {
                       });
                       let completedTopPlayers = [];
                       for (let i = 0; i < topPlayers.length; i++) {
-                        if (i < 40) {
+                        if (i < 75) {
                           completedTopPlayers.push(topPlayers[i])
                         }
                       }
