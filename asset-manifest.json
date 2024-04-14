@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/cornhole-stats/static/css/main.3046c94e.css",
-    "main.js": "/cornhole-stats/static/js/main.e200d0a6.js",
+    "main.css": "/cornhole-stats/static/css/main.910460d2.css",
+    "main.js": "/cornhole-stats/static/js/main.6388714e.js",
     "static/js/787.2fe848fa.chunk.js": "/cornhole-stats/static/js/787.2fe848fa.chunk.js",
     "static/media/logo.svg": "/cornhole-stats/static/media/logo.6ce24c58023cc2f8fd88fe9d219db6c6.svg",
     "index.html": "/cornhole-stats/index.html",
-    "main.3046c94e.css.map": "/cornhole-stats/static/css/main.3046c94e.css.map",
-    "main.e200d0a6.js.map": "/cornhole-stats/static/js/main.e200d0a6.js.map",
+    "main.910460d2.css.map": "/cornhole-stats/static/css/main.910460d2.css.map",
+    "main.6388714e.js.map": "/cornhole-stats/static/js/main.6388714e.js.map",
     "787.2fe848fa.chunk.js.map": "/cornhole-stats/static/js/787.2fe848fa.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.3046c94e.css",
-    "static/js/main.e200d0a6.js"
+    "static/css/main.910460d2.css",
+    "static/js/main.6388714e.js"
   ]
 }
