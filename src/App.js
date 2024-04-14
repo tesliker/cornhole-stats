@@ -23,56 +23,120 @@ import FormLabel from '@mui/material/FormLabel';
 
 
 class App extends Component {
-  state = { playerData: [], radioVal: 'ppr', selectVal: 8};
+  state = { playerData: [], radioVal: 'singles'};
 
   componentDidMount() {
-    for (let i = 0; i < players.length; i++) {
-      fetch('https://acl-api-server.azurewebsites.net/api/v1/yearly-player-stats/' + players[i]  + '?bucketID=' + this.state.selectVal)
-        .then(results => results.json())
-        .then(data => {
-          if (data.data.playerPerformanceStats.ptsPerRnd) {
-            this.setState(prevState => ({
-              playerData: [...prevState.playerData, data.data]
-            }))
-          }
-        }).catch(err => console.log(err))
-    }
+    fetch('https://mysqlvm.blob.core.windows.net/acl-standings/2023-2024/acl-overall-standings.json')
+      .then(results => results.json())
+      .then(data => {
+        const playersWithSkillP = data.playerACLStandingsList.filter(player => player.playerSkillLevel === 'P');
+        const playerData = [];
+        playersWithSkillP.forEach(player => {
+          fetch(`https://acl-api-server.azurewebsites.net/api/v1/acl-standings/player-id/${player.playerID}?bucket_id=8`)
+            .then(results => results.json())
+            .then(data => {
+              const events = data.playerACLStandingsList[0].completeEventList.filter(event =>
+                event.eventtype === 'N' &&
+                event.locationname === "Palm Beach Convention Center" &&
+                !event.leaguename.toLowerCase().includes('canada') &&
+                !event.leaguename.toLowerCase().includes('elite'));
+              const doublePoints = events.filter(event => event.matchtype === 'D').reduce((acc, curr) => acc + curr.totalEventpoints, 0);
+              const singlesPoints = events.filter(event => event.matchtype === 'S').reduce((acc, curr) => acc + curr.totalEventpoints, 0);
+              playerData.push({ ...player, doublePoints, singlesPoints });
+            }).then(() => {
+            if (playerData.length === playersWithSkillP.length) {
+              this.rankPlayers(playerData, 'doublePoints');
+              this.rankPlayers(playerData, 'singlesPoints');
+              this.setState({ playerData });
+            }
+          }).catch(err => console.log(err));
+        });
+      }).catch(err => console.log(err));
   }
+
+
+
+
+
 
   componentDidUpdate(prevProps, prevState) {
     if (prevState.selectVal !== this.state.selectVal) {
-      this.setState(prevState => ({
-        playerData: []
-      }))
+      this.setState({ playerData: [] });
+      fetch('https://mysqlvm.blob.core.windows.net/acl-standings/2023-2024/acl-overall-standings.json')
+        .then(results => results.json())
+        .then(data => {
+          const playersWithSkillP = data.playerACLStandingsList.filter(player => player.playerSkillLevel === 'P');
+          const playerData = [];
+          playersWithSkillP.forEach(player => {
+            fetch(`https://acl-api-server.azurewebsites.net/api/v1/acl-standings/player-id/${player.playerID}?bucket_id=8`)
+              .then(results => results.json())
+              .then(data => {
+                const events = data.playerACLStandingsList[0].completeEventList.filter(event =>
+                  event.eventtype === 'N' &&
+                  event.locationname === "Palm Beach Convention Center" &&
+                  !event.leaguename.toLowerCase().includes('canada') &&
+                  !event.leaguename.toLowerCase().includes('elite'));
+                const doublePoints = events.filter(event => event.matchtype === 'D').reduce((acc, curr) => acc + curr.totalEventpoints, 0);
+                const singlesPoints = events.filter(event => event.matchtype === 'S').reduce((acc, curr) => acc + curr.totalEventpoints, 0);
+                playerData.push({ ...player, doublePoints, singlesPoints });
+              }).then(() => {
+              if (playerData.length === playersWithSkillP.length) {
+                this.rankPlayers(playerData, 'doublePoints');
+                this.rankPlayers(playerData, 'singlesPoints');
+                this.setState({ playerData });
+              }
+            }).catch(err => console.log(err));
+          });
+        }).catch(err => console.log(err));
+    }
+  }
+
+
+
+  rankPlayers(players, pointType) {
+    players.sort((a, b) => b[pointType] - a[pointType]);
+
+    let rank = 1;
+    if (pointType === 'doublePoints') {  // Special handling for doubles
       for (let i = 0; i < players.length; i++) {
-        fetch('https://acl-api-server.azurewebsites.net/api/v1/yearly-player-stats/' + players[i]  + '?bucketID=' + this.state.selectVal)
-          .then(results => results.json())
-          .then(data => {
-            if (data.data.playerPerformanceStats.ptsPerRnd) {
-              this.setState(prevState => ({
-                playerData: [...prevState.playerData, data.data]
-              }))
-            }
-          }).catch(err => console.log(err))
+        if (i > 0 && players[i][pointType] === players[i - 1][pointType]) {
+          players[i][`${pointType}Ranking`] = players[i - 1][`${pointType}Ranking`];
+        } else {
+          players[i][`${pointType}Ranking`] = Math.ceil((rank + 1) / 2); // "Halving" the rank conceptually
+        }
+        rank++;
+      }
+    } else {  // Standard ranking for singles
+      for (let i = 0; i < players.length; i++) {
+        if (i > 0 && players[i][pointType] === players[i - 1][pointType]) {
+          players[i][`${pointType}Ranking`] = players[i - 1][`${pointType}Ranking`];
+        } else {
+          players[i][`${pointType}Ranking`] = rank;
+        }
+        rank++;
       }
     }
   }
 
-  comparePPR(a,b) {
-    if ( a.playerPerformanceStats.ptsPerRnd > b.playerPerformanceStats.ptsPerRnd ){
+
+
+
+
+  compareSingles(a,b) {
+    if ( a.singlesPoints > b.singlesPoints ){
       return -1;
     }
-    if ( a.playerPerformanceStats.ptsPerRnd < b.playerPerformanceStats.ptsPerRnd ){
+    if ( a.singlesPoints < b.singlesPoints ){
       return 1;
     }
     return 0;
   }
 
-  compareWin(a,b) {
-    if ( a.playerWinLossStats.winPct > b.playerWinLossStats.winPct ){
+  compareDoubles(a,b) {
+    if ( a.doublePoints > b.doublePoints ){
       return -1;
     }
-    if ( a.playerWinLossStats.winPct < b.playerWinLossStats.winPct ){
+    if ( a.doublePoints < b.doublePoints ){
       return 1;
     }
     return 0;
@@ -90,10 +154,6 @@ class App extends Component {
 
   handleRadioChange = (event) => {
     this.setState({radioVal: event.target.value})
-  }
-
-  handleSelectChange = (event) => {
-    this.setState({selectVal: event.target.value})
   }
 
   subHeading(data) {
@@ -117,29 +177,30 @@ class App extends Component {
     }
 
     var obj = this.state.playerData;
-    if (this.state.radioVal === 'ppr') {
-      obj.sort(this.comparePPR);
+    if (this.state.radioVal === 'singles') {
+      obj.sort(this.compareSingles);
     }
 
-    if (this.state.radioVal === 'wins') {
-      obj.sort(this.compareWin);
+    if (this.state.radioVal === 'doubles') {
+      obj.sort(this.compareDoubles);
     }
 
-    if (this.state.radioVal === 'diff') {
-      obj.sort(this.compareDiff);
-    }
 /*    let playerMarkup = [];
     for (let i = 0; i < this.state.playerData.length; i++) {
 
     }*/
-    const playerMarkup = this.state.playerData.map((data) =>
+    console.log(this.state.playerData);
+    const playerMarkup = this.state.playerData.map((data, index) =>
       <Accordion>
         <AccordionSummary
         expandIcon={<ExpandMoreIcon/>}
         aria-controls="panel1a-content"
         id="panel1a-header"
           >
-          <Typography>{data.playerPerformanceStats.playerFirstName} {data.playerPerformanceStats.playerLastName} <span>{this.subHeading(data)}</span></Typography>
+          <Typography>
+            {this.state.radioVal === 'singles' ? data.singlesPointsRanking : data.doublePointsRanking}. <strong>{data.playerFirstName} {data.playerLastName}</strong>
+            <span> Doubles: {data.doublePoints} | Singles: {data.singlesPoints}</span>
+          </Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Typography variant="h4" gutterBottom>
@@ -150,98 +211,13 @@ class App extends Component {
               PPR
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.ptsPerRnd}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              OPPR
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.opponentPtsPerRnd}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Pt. Diff.
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.diffPerRnd}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Bags In %
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.BagsInPct}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Bags On %
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.BagsOnPct}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Bags Off %
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.BagsOffPct}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              4 Bagger %
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerPerformanceStats.fourBaggerPct}
-            </Typography>
-          </div>
-
-          <Typography variant="h4" gutterBottom>
-            WIN / LOSS STATS
-          </Typography>
-
-          <div className={'stat'}>
-            <Typography>
-              Total Wins
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerWinLossStats.totalWins}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Total Losses
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerWinLossStats.totalLosses}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Total Games
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerWinLossStats.totalGames}
-            </Typography>
-          </div>
-          <div className={'stat'}>
-            <Typography>
-              Win %
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              {data.playerWinLossStats.winPct}
             </Typography>
           </div>
 
         </AccordionDetails>
       </Accordion>
     );
+
     return (
       <div className="App">
 
@@ -264,19 +240,6 @@ class App extends Component {
           </AppBar>
 
           <FormControl className={'SortPPR'}>
-            <Select
-              labelId="year-label"
-              id="year"
-              value={this.state.selectVal}
-              label="Year"
-              onChange={this.handleSelectChange}
-            >
-              <MenuItem value={8}>2023</MenuItem>
-              <MenuItem value={7}>2022</MenuItem>
-              <MenuItem value={6}>2021</MenuItem>
-              <MenuItem value={5}>2020</MenuItem>
-              <MenuItem value={4}>2019</MenuItem>
-            </Select>
             <RadioGroup
               row
               defaultValue="ppr"
@@ -285,9 +248,8 @@ class App extends Component {
               value={this.state.radioVal}
               onChange={this.handleRadioChange}
             >
-              <FormControlLabel value="ppr" control={<Radio />} label="PPR" />
-              <FormControlLabel value="wins" control={<Radio />} label="Win %" />
-              <FormControlLabel value="diff" control={<Radio />} label="Diff" />
+              <FormControlLabel value="singles" control={<Radio />} label="Singles" />
+              <FormControlLabel value="doubles" control={<Radio />} label="Doubles" />
             </RadioGroup>
           </FormControl>
 
