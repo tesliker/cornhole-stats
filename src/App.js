@@ -20,32 +20,24 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
 
-
-
 class App extends Component {
   state = { playerData: [], radioVal: 'ppr', selectVal: 8};
 
   componentDidMount() {
-    for (let i = 0; i < players.length; i++) {
-      fetch('https://acl-api-server.azurewebsites.net/api/v1/acl-standings/player-id/' + players[i]  + '?bucket_id=' + this.state.selectVal)
-        .then(results => results.json())
-        .then(data => {
-          if (data.status === 'OK') {
-            if (data.playerACLStandingsList[0].playerFirstName) {
-              this.setState(prevState => ({
-                playerData: [...prevState.playerData, data]
-              }))
-            }
-          }
-        }).catch(err => console.log(err))
-    }
+    import('./playerData/allPlayers.json')
+      .then(data => {
+        if (data.status === 'OK') {
+          this.setState({ playerData: data.data });
+        }
+      })
+      .catch(err => console.log(err));
   }
 
   comparePPR(a,b) {
-    if ( a.playerACLStandingsList[0].playerOverAllTotal > b.playerACLStandingsList[0].playerOverAllTotal ){
+    if ( a.playerPerformanceStats.totalPtsTotal > b.playerPerformanceStats.totalPtsTotal ){
       return -1;
     }
-    if ( a.playerACLStandingsList[0].playerOverAllTotal < b.playerACLStandingsList[0].playerOverAllTotal ){
+    if ( a.playerPerformanceStats.totalPtsTotal < b.playerPerformanceStats.totalPtsTotal ){
       return 1;
     }
     return 0;
@@ -71,6 +63,16 @@ class App extends Component {
     return 0;
   }
 
+  compareCPI(a, b) {
+    if (a.playerCPIStats.playerCPI > b.playerCPIStats.playerCPI) {
+      return -1;
+    }
+    if (a.playerCPIStats.playerCPI < b.playerCPIStats.playerCPI) {
+      return 1;
+    }
+    return 0;
+  }
+
   handleRadioChange = (event) => {
     this.setState({radioVal: event.target.value})
   }
@@ -81,16 +83,17 @@ class App extends Component {
 
   subHeading(data) {
     if (this.state.radioVal === 'ppr') {
-      return '(' + data.playerACLStandingsList[0].playerOverAllTotal + ' Total Points)';
+      return '(' + data.playerPerformanceStats.totalPtsTotal + ' Total Points)';
     }
-    //
-    // if (this.state.radioVal === 'wins') {
-    //   return '(' + data.playerWinLossStats.winPct + '% Win)';
-    // }
-    //
-    // if (this.state.radioVal === 'diff') {
-    //   return '(' + data.playerPerformanceStats.diffPerRnd + ' Diff)';
-    // }
+    if (this.state.radioVal === 'wins') {
+      return '(' + data.playerWinLossStats.winPct + '% Win)';
+    }
+    if (this.state.radioVal === 'diff') {
+      return '(' + data.playerPerformanceStats.diffPerRnd + ' Diff)';
+    }
+    if (this.state.radioVal === 'cpi') {
+      return '(' + data.playerCPIStats.playerCPI + ' CPI)';
+    }
   }
 
   render() {
@@ -111,10 +114,11 @@ class App extends Component {
     if (this.state.radioVal === 'diff') {
       obj.sort(this.compareDiff);
     }
-/*    let playerMarkup = [];
-    for (let i = 0; i < this.state.playerData.length; i++) {
 
-    }*/
+    if (this.state.radioVal === 'cpi') {
+      obj.sort(this.compareCPI);
+    }
+
     const playerMarkup = this.state.playerData.map((data, i) =>
       <Accordion>
         <AccordionSummary
@@ -122,7 +126,7 @@ class App extends Component {
         aria-controls="panel1a-content"
         id="panel1a-header"
           >
-          <Typography>{i + 1}. {data.playerACLStandingsList[0].playerFirstName} {data.playerACLStandingsList[0].playerLastName} <span>{this.subHeading(data)}</span></Typography>
+          <Typography>{i + 1}. {data.playerPerformanceStats.playerFirstName} {data.playerPerformanceStats.playerLastName} <span>{this.subHeading(data)}</span></Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Typography variant="h4" gutterBottom>
@@ -133,47 +137,55 @@ class App extends Component {
               Local Pts
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerACLStandingsList[0].localTotalPoints}
+              {data.playerPerformanceStats.totalPts}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              Regional Pts
+              Opponent Pts
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerACLStandingsList[0].regionalTotalPoints}
+              {data.playerPerformanceStats.opponentPts}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              Conference Pts
+              DPR
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerACLStandingsList[0].conferenceTotalPoints}
+              {data.playerPerformanceStats.DPR}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              Open Pts
+              Four Bag %
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerACLStandingsList[0].openTotalPoints}
+              {data.playerPerformanceStats.fourBaggerPct}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              Member Bonus
+              Bags In %
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerACLStandingsList[0].playerMembershipBonus}
+              {data.playerPerformanceStats.BagsInPct}
             </Typography>
           </div>
           <div className={'stat'}>
             <Typography>
-              Conference Bonus
+              Bags On %
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerACLStandingsList[0].conferenceBonusPoints}
+              {data.playerPerformanceStats.BagsOnPct}
+            </Typography>
+          </div>
+          <div className={'stat'}>
+            <Typography>
+              Bags Off %
+            </Typography>
+            <Typography variant="h6" gutterBottom>
+              {data.playerPerformanceStats.BagsOffPct}
             </Typography>
           </div>
           <div className={'stat'}>
@@ -181,7 +193,7 @@ class App extends Component {
               Total Points
             </Typography>
             <Typography variant="h6" gutterBottom>
-              {data.playerACLStandingsList[0].playerOverAllTotal}
+              {data.playerPerformanceStats.totalPtsTotal}
             </Typography>
           </div>
 
@@ -232,6 +244,9 @@ class App extends Component {
               onChange={this.handleRadioChange}
             >
               <FormControlLabel value="ppr" control={<Radio />} label="Point total" />
+              <FormControlLabel value="wins" control={<Radio />} label="Win %" />
+              <FormControlLabel value="diff" control={<Radio />} label="Diff" />
+              <FormControlLabel value="cpi" control={<Radio />} label="CPI" />
             </RadioGroup>
           </FormControl>
 
@@ -243,261 +258,180 @@ class App extends Component {
 }
 
 const players = [
-  "8932",
-  "10634",
-  "56620",
-  "110871",
-  "53793",
-  "22427",
-  "27791",
-  "5394",
-  "12961",
-  "8860",
-  "2097",
-  "118664",
-  "21919",
-  "13318",
-  "114046",
-  "10757",
-  "40906",
-  "56462",
-  "129590",
-  "136646",
-  "55544",
-  "9609",
-  "58566",
-  "10755",
-  "113248",
-  "117368",
-  "3792",
-  "23834",
-  "3713",
-  "70632",
-  "55065",
-  "3693",
-  "36108",
-  "68720",
-  "47601",
-  "68759",
-  "23963",
-  "14886",
-  "20225",
-  "102484",
-  "69111",
-  "64634",
-  "24908",
-  "111664",
-  "26346",
-  "30447",
-  "104029",
-  "9837",
-  "125131",
-  "68899",
-  "10627",
-  "9768",
-  "9354",
-  "142242",
-  "5861",
-  "112615",
-  "23194",
-  "46805",
-  "148230",
-  "63723",
-  "114539",
-  "100295",
-  "144711",
-  "62093",
-  "568",
-  "130983",
-  "5309",
-  "10167",
-  "39249",
-  "6921",
-  "43379",
-  "9551",
-  "101711",
-  "5977",
-  "114909",
-  "3423",
-  "4519",
-  "14235",
-  "68504",
-  "14913",
-  "7028",
-  "135870",
-  "25477",
-  "52722",
-  "104040",
-  "102686",
-  "5664",
-  "61459",
-  "121938",
-  "8324",
-  "5988",
-  "58606",
-  "55203",
-  "70337",
-  "110754",
-  "1833",
-  "106379",
-  "8275",
-  "65633",
-  "113339",
-  "27319",
-  "65605",
-  "46816",
-  "9355",
-  "68516",
-  "5385",
-  "19134",
-  "115356",
-  "62119",
-  "118222",
-  "44611",
-  "70130",
-  "137620",
-  "133034",
-  "22851",
-  "143693",
-  "146437",
-  "69937",
-  "113258",
-  "170206",
-  "46800",
-  "19200",
-  "7175",
-  "113184",
-  "124609",
-  "46405",
-  "113544",
-  "67879",
-  "10128",
-  "2813",
-  "104369",
-  "7905",
-  "30312",
-  "9007",
-  "23654",
-  "112559",
-  "121931",
-  "101458",
-  "13750",
-  "22728",
-  "7969",
-  "10771",
-  "20037",
-  "106803",
-  "54608",
-  "50333",
-  "102010",
-  "38380",
-  "5807",
-  "52206",
-  "2425",
-  "41341",
-  "29018",
-  "114157",
-  "1826",
-  "60608",
-  "20758",
-  "133165",
-  "9101",
-  "103780",
-  "116429",
-  "105998",
-  "24147",
-  "4645",
-  "54009",
-  "106005",
-  "29736",
-  "66734",
-  "100681",
-  "47371",
-  "36148",
-  "28672",
-  "47313",
-  "3767",
-  "30388",
-  "111064",
-  "110384",
-  "130938",
-  "68826",
-  "36983",
-  "132956",
-  "135871",
-  "26700",
-  "7805",
-  "25616",
-  "127908",
-  "118286",
-  "116036",
-  "111234",
-  "114572",
-  "16472",
-  "2069",
-  "101282",
-  "3695",
-  "8703",
-  "3185",
-  "18389",
-  "20327",
-  "65651",
-  "9607",
-  "126857",
-  "45629",
-  "2210",
-  "27790",
-  "6016",
-  "60923",
-  "38602",
-  "8870",
-  "5374",
-  "57534",
-  "66730",
-  "29142",
-  "40848",
-  "110790",
-  "32964",
-  "20353",
-  "12470",
-  "12985",
-  "29102",
-  "13876",
-  "105465",
-  "129206",
-  "21875",
-  "8975",
-  "25619",
-  "44855",
-  "140876",
-  "16352",
-  "49059",
-  "105987",
-  "21241",
-  "100185",
-  "2632",
-  "5410",
-  "55262",
-  "10377",
-  "123404",
-  "44391",
-  "121314",
-  "25272",
-  "131336",
-  "132762",
-  "47412",
-  "126101",
-  "474",
-  "9709",
-  "4161",
-  "100572",
-  "129478",
-  "26695",
-  "47301",
-  "64643",
-  "101284",
-  "57487",
-  "68184"
+  137573,
+  104149,
+  138098,
+  3720,
+  190906,
+  137463,
+  148321,
+  27790,
+  69521,
+  138343,
+  22575,
+  144327,
+  8458,
+  100149,
+  142607,
+  29018,
+  170111,
+  183669,
+  55544,
+  139308,
+  56043,
+  67020,
+  107712,
+  136777,
+  14445,
+  101133,
+  8244,
+  15033,
+  104029,
+  27412,
+  130717,
+  158695,
+  27979,
+  9268,
+  119637,
+  124423,
+  54009,
+  116226,
+  112949,
+  105998,
+  9609,
+  170620,
+  112559,
+  8975,
+  27393,
+  44721,
+  155164,
+  129590,
+  3693,
+  8883,
+  10771,
+  102686,
+  176669,
+  52612,
+  13750,
+  2097,
+  146469,
+  118444,
+  10627,
+  43379,
+  5309,
+  10206,
+  145126,
+  51130,
+  176952,
+  101173,
+  62473,
+  21919,
+  139120,
+  100981,
+  100445,
+  129066,
+  144285,
+  114539,
+  12661,
+  27526,
+  135954,
+  124233,
+  31754,
+  23455,
+  130027,
+  155342,
+  3185,
+  101458,
+  137542,
+  20037,
+  24908,
+  5807,
+  136431,
+  60923,
+  161535,
+  29541,
+  27181,
+  69683,
+  221280,
+  8870,
+  167540,
+  61675,
+  128817,
+  128817,
+  122670,
+  154384,
+  169600,
+  122250,
+  141819,
+  165597,
+  29056,
+  40710,
+  29142,
+  104524,
+  101205,
+  139043,
+  100783,
+  13876,
+  105465,
+  22655,
+  114724,
+  125495,
+  139276,
+  49634,
+  171985,
+  101841,
+  130253,
+  177200,
+  156224,
+  158034,
+  127908,
+  114046,
+  130983,
+  168425,
+  181775,
+  2436,
+  161653,
+  123379,
+  109982,
+  116447,
+  9101,
+  52816,
+  151694,
+  106001,
+  19083,
+  177928,
+  162879,
+  18719,
+  103443,
+  154954,
+  116351,
+  200854,
+  103926,
+  140325,
+  36148,
+  144654,
+  119894,
+  108799,
+  29873,
+  3157,
+  212511,
+  26695,
+  132175,
+  107266,
+  137585,
+  9732,
+  10241,
+  123090,
+  109473,
+  130065,
+  24085,
+  45840,
+  132801,
+  43947,
+  22232,
+  5368,
+  101009,
+  58566
 ];
 
 export default App;
