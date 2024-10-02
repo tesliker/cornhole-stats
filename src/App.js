@@ -54,7 +54,6 @@ class App extends Component {
   }
 
   handleCheckboxChange = (playerId) => {
-    console.log(playerId);
     this.setState(prevState => {
       const updatedPlayerData = prevState.playerData.filter(player => player.playerPerformanceStats.playerID !== playerId);
       const urlParams = new URLSearchParams(window.location.search);
@@ -88,13 +87,13 @@ class App extends Component {
         >
           <FormControlLabel
             control={<Checkbox onChange={() => this.handleCheckboxChange(data.playerPerformanceStats.playerID)} />}
-            label={<Typography>{i + 1}. {data.playerPerformanceStats.playerFirstName} {data.playerPerformanceStats.playerLastName} <span>{this.subHeading(data)}</span></Typography>}
+            label={<Typography></Typography>}
           />
+          <Typography variant="h6">
+            {i + 1}. {data.playerPerformanceStats.playerFirstName} {data.playerPerformanceStats.playerLastName} <span>{this.subHeading(data)}</span>
+          </Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <Typography variant="h4" gutterBottom>
-            Player ACL Points Breakdown
-          </Typography>
           <div className={'stat'}>
             <Typography>
               Local Pts
@@ -300,8 +299,6 @@ const players = [
   8870,
   167540,
   61675,
-  128817,
-  128817,
   122670,
   154384,
   169600,
