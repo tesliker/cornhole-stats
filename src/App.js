@@ -19,114 +19,77 @@ import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
+import allPlayers from './playerData/allPlayers.json';
+import TextField from '@mui/material/TextField';
+import Checkbox from '@mui/material/Checkbox';
 
 class App extends Component {
-  state = { playerData: [], radioVal: 'ppr', selectVal: 8};
-
+  state = { playerData: [], searchQuery: '' }; // Removed radioVal and selectVal
   componentDidMount() {
-    import('./playerData/allPlayers.json')
-      .then(data => {
-        if (data.status === 'OK') {
-          this.setState({ playerData: data.data });
-        }
-      })
-      .catch(err => console.log(err));
-  }
-
-  comparePPR(a,b) {
-    if ( a.playerPerformanceStats.totalPtsTotal > b.playerPerformanceStats.totalPtsTotal ){
-      return -1;
-    }
-    if ( a.playerPerformanceStats.totalPtsTotal < b.playerPerformanceStats.totalPtsTotal ){
-      return 1;
-    }
-    return 0;
-  }
-
-  compareWin(a,b) {
-    if ( a.playerWinLossStats.winPct > b.playerWinLossStats.winPct ){
-      return -1;
-    }
-    if ( a.playerWinLossStats.winPct < b.playerWinLossStats.winPct ){
-      return 1;
-    }
-    return 0;
-  }
-
-  compareDiff(a,b) {
-    if ( a.playerPerformanceStats.diffPerRnd > b.playerPerformanceStats.diffPerRnd ){
-      return -1;
-    }
-    if ( a.playerPerformanceStats.diffPerRnd < b.playerPerformanceStats.diffPerRnd ){
-      return 1;
-    }
-    return 0;
+    const urlParams = new URLSearchParams(window.location.search);
+    const playersToRemove = urlParams.get('playersRemove')?.split(',').map(Number) || [];
+    
+    const playerData = players
+      .map(playerId => allPlayers[playerId]?.data)
+      .filter(data => data && !playersToRemove.includes(data.playerPerformanceStats.playerID));
+    
+    playerData.sort(this.compareCPI);
+    this.setState({ playerData });
   }
 
   compareCPI(a, b) {
-    if (a.playerCPIStats.playerCPI > b.playerCPIStats.playerCPI) {
+    const cpiA = a?.playerCPIStats?.playerCPI || 0;
+    const cpiB = b?.playerCPIStats?.playerCPI || 0;
+    if (cpiA > cpiB) {
       return -1;
     }
-    if (a.playerCPIStats.playerCPI < b.playerCPIStats.playerCPI) {
+    if (cpiA < cpiB) {
       return 1;
     }
     return 0;
   }
 
-  handleRadioChange = (event) => {
-    this.setState({radioVal: event.target.value})
+  handleSearchChange = (event) => {
+    this.setState({ searchQuery: event.target.value });
   }
 
-  handleSelectChange = (event) => {
-    this.setState({selectVal: event.target.value})
+  handleCheckboxChange = (playerId) => {
+    console.log(playerId);
+    this.setState(prevState => {
+      const updatedPlayerData = prevState.playerData.filter(player => player.playerPerformanceStats.playerID !== playerId);
+      const urlParams = new URLSearchParams(window.location.search);
+      const playersToRemove = new Set(urlParams.get('playersRemove')?.split(',').map(Number) || []);
+      playersToRemove.add(playerId);
+      urlParams.set('playersRemove', Array.from(playersToRemove).join(','));
+      const newUrl = `${window.location.pathname}?${urlParams.toString().replace(/%2C/g, ',')}`;
+      window.history.replaceState(null, '', newUrl);
+      return { playerData: updatedPlayerData };
+    });
   }
 
   subHeading(data) {
-    if (this.state.radioVal === 'ppr') {
-      return '(' + data.playerPerformanceStats.totalPtsTotal + ' Total Points)';
-    }
-    if (this.state.radioVal === 'wins') {
-      return '(' + data.playerWinLossStats.winPct + '% Win)';
-    }
-    if (this.state.radioVal === 'diff') {
-      return '(' + data.playerPerformanceStats.diffPerRnd + ' Diff)';
-    }
-    if (this.state.radioVal === 'cpi') {
-      return '(' + data.playerCPIStats.playerCPI + ' CPI)';
-    }
+    const cpi = data?.playerCPIStats?.playerCPI || 'N/A';
+    const nameWithCPI = `(CPI: ${cpi})`;
+    return `${nameWithCPI}`;
   }
 
   render() {
+    const filteredPlayers = this.state.playerData.filter(data => 
+      data.playerPerformanceStats.playerFirstName.toLowerCase().includes(this.state.searchQuery.toLowerCase()) ||
+      data.playerPerformanceStats.playerLastName.toLowerCase().includes(this.state.searchQuery.toLowerCase())
+    );
 
-    if (this.state.playerData.length < 0) {
-      return;
-    }
-
-    var obj = this.state.playerData;
-    if (this.state.radioVal === 'ppr') {
-      obj.sort(this.comparePPR);
-    }
-
-    if (this.state.radioVal === 'wins') {
-      obj.sort(this.compareWin);
-    }
-
-    if (this.state.radioVal === 'diff') {
-      obj.sort(this.compareDiff);
-    }
-
-    if (this.state.radioVal === 'cpi') {
-      obj.sort(this.compareCPI);
-    }
-
-    const playerMarkup = this.state.playerData.map((data, i) =>
-      <Accordion>
+    const playerMarkup = filteredPlayers.map((data, i) =>
+      <Accordion key={data.playerPerformanceStats.playerID}>
         <AccordionSummary
-        expandIcon={<ExpandMoreIcon/>}
-        aria-controls="panel1a-content"
-        id="panel1a-header"
-          >
-          <Typography>{i + 1}. {data.playerPerformanceStats.playerFirstName} {data.playerPerformanceStats.playerLastName} <span>{this.subHeading(data)}</span></Typography>
+          expandIcon={<ExpandMoreIcon/>}
+          aria-controls={`panel${data.playerPerformanceStats.playerID}-content`}
+          id={`panel${data.playerPerformanceStats.playerID}-header`}
+        >
+          <FormControlLabel
+            control={<Checkbox onChange={() => this.handleCheckboxChange(data.playerPerformanceStats.playerID)} />}
+            label={<Typography>{i + 1}. {data.playerPerformanceStats.playerFirstName} {data.playerPerformanceStats.playerLastName} <span>{this.subHeading(data)}</span></Typography>}
+          />
         </AccordionSummary>
         <AccordionDetails>
           <Typography variant="h4" gutterBottom>
@@ -221,33 +184,14 @@ class App extends Component {
             </Toolbar>
           </AppBar>
 
-          <FormControl className={'SortPPR'}>
-            <Select
-              labelId="year-label"
-              id="year"
-              value={this.state.selectVal}
-              label="Year"
-              onChange={this.handleSelectChange}
-            >
-              <MenuItem value={8}>2023</MenuItem>
-              <MenuItem value={7}>2022</MenuItem>
-              <MenuItem value={6}>2021</MenuItem>
-              <MenuItem value={5}>2020</MenuItem>
-              <MenuItem value={4}>2019</MenuItem>
-            </Select>
-            <RadioGroup
-              row
-              defaultValue="ppr"
-              aria-labelledby="demo-row-radio-buttons-group-label"
-              name="row-radio-buttons-group"
-              value={this.state.radioVal}
-              onChange={this.handleRadioChange}
-            >
-              <FormControlLabel value="ppr" control={<Radio />} label="Point total" />
-              <FormControlLabel value="wins" control={<Radio />} label="Win %" />
-              <FormControlLabel value="diff" control={<Radio />} label="Diff" />
-              <FormControlLabel value="cpi" control={<Radio />} label="CPI" />
-            </RadioGroup>
+          <FormControl className={'SearchBox'} sx={{ my: 2 }}> 
+            <TextField
+              id="search"
+              label="Search Players"
+              variant="outlined"
+              value={this.state.searchQuery}
+              onChange={this.handleSearchChange}
+            />
           </FormControl>
 
           {playerMarkup}
