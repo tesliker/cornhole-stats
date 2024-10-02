@@ -1,0 +1,46 @@
+{
+    "status": "OK",
+    "message": "Successfully Get Event Player Stats",
+    "data": {
+    "playerPerformanceStats": {
+    "playerID": 118664,
+    "playerFirstName": "Tommy",
+    "playerLastName": "Sliker",
+    "bucketID": 9,
+    "yearDesc": "2023 - 2024",
+    "ptsPerRnd": 9.38,
+    "rdsTotal": 4857,
+    "rounds": 4857,
+    "totPtsTotal": 45545,
+    "totalPts": 45545,
+    "opponentPtsPerRnd": 9.16,
+    "OppPtsPerRnd": 9.16,
+    "oppPtsTotal": 44467,
+    "opponentPts": 44467,
+    "DPR": 0.22,
+    "diffPerRnd": 0.22,
+    "fourBagPct": "29.77",
+    "fourBaggerPct": "29.77",
+    "bagsInPct": "69.50",
+    "BagsInPct": "69.50",
+    "bagsOnPct": "25.92",
+    "BagsOnPct": "25.92",
+    "bagsOffPct": "4.58",
+    "BagsOffPct": "4.58"
+    },
+    "playerWinLossStats": {
+    "totalWins": -1
+    },
+    "playerCPIStats": {
+    "playerID": 118664,
+    "playerCPI": 9.49,
+    "playerMembershipID": 0,
+    "CPIQualified": 1,
+    "playerMembershipExpiryDate": null,
+    "playerMembershipStatus": "N",
+    "playerMembershipType": "N",
+    "playerMembershipName": "NO MEMBERSHIP",
+    "showPlayerCPI": 0
+    }
+    }
+    }

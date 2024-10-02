@@ -19,205 +19,150 @@ import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
-
-
+import allPlayers from './playerData/allPlayers.json';
+import TextField from '@mui/material/TextField';
+import Checkbox from '@mui/material/Checkbox';
 
 class App extends Component {
-  state = { playerData: [], radioVal: 'singles'};
-
+  state = { playerData: [], searchQuery: '' }; // Removed radioVal and selectVal
   componentDidMount() {
-    fetch('https://mysqlvm.blob.core.windows.net/acl-standings/2023-2024/acl-overall-standings.json')
-      .then(results => results.json())
-      .then(data => {
-        const playersWithSkillP = data.playerACLStandingsList.filter(player => player.playerSkillLevel === 'P');
-        const playerData = [];
-        playersWithSkillP.forEach(player => {
-          fetch(`https://acl-api-server.azurewebsites.net/api/v1/acl-standings/player-id/${player.playerID}?bucket_id=8`)
-            .then(results => results.json())
-            .then(data => {
-              const events = data.playerACLStandingsList[0].completeEventList.filter(event =>
-                event.eventtype === 'N' &&
-                event.locationname === "Palm Beach Convention Center" &&
-                !event.leaguename.toLowerCase().includes('canada') &&
-                !event.leaguename.toLowerCase().includes('elite'));
-              const doublePoints = events.filter(event => event.matchtype === 'D').reduce((acc, curr) => acc + curr.totalEventpoints, 0);
-              const singlesPoints = events.filter(event => event.matchtype === 'S').reduce((acc, curr) => acc + curr.totalEventpoints, 0);
-              playerData.push({ ...player, doublePoints, singlesPoints });
-            }).then(() => {
-            if (playerData.length === playersWithSkillP.length) {
-              this.rankPlayers(playerData, 'doublePoints');
-              this.rankPlayers(playerData, 'singlesPoints');
-              this.setState({ playerData });
-            }
-          }).catch(err => console.log(err));
-        });
-      }).catch(err => console.log(err));
+    const urlParams = new URLSearchParams(window.location.search);
+    const playersToRemove = urlParams.get('playersRemove')?.split(',').map(Number) || [];
+    
+    const playerData = players
+      .map(playerId => allPlayers[playerId]?.data)
+      .filter(data => data && !playersToRemove.includes(data.playerPerformanceStats.playerID));
+    
+    playerData.sort(this.compareCPI);
+    this.setState({ playerData });
   }
 
-
-
-
-
-
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.selectVal !== this.state.selectVal) {
-      this.setState({ playerData: [] });
-      fetch('https://mysqlvm.blob.core.windows.net/acl-standings/2023-2024/acl-overall-standings.json')
-        .then(results => results.json())
-        .then(data => {
-          const playersWithSkillP = data.playerACLStandingsList.filter(player => player.playerSkillLevel === 'P');
-          const playerData = [];
-          playersWithSkillP.forEach(player => {
-            fetch(`https://acl-api-server.azurewebsites.net/api/v1/acl-standings/player-id/${player.playerID}?bucket_id=8`)
-              .then(results => results.json())
-              .then(data => {
-                const events = data.playerACLStandingsList[0].completeEventList.filter(event =>
-                  event.eventtype === 'N' &&
-                  event.locationname === "Palm Beach Convention Center" &&
-                  !event.leaguename.toLowerCase().includes('canada') &&
-                  !event.leaguename.toLowerCase().includes('elite'));
-                const doublePoints = events.filter(event => event.matchtype === 'D').reduce((acc, curr) => acc + curr.totalEventpoints, 0);
-                const singlesPoints = events.filter(event => event.matchtype === 'S').reduce((acc, curr) => acc + curr.totalEventpoints, 0);
-                playerData.push({ ...player, doublePoints, singlesPoints });
-              }).then(() => {
-              if (playerData.length === playersWithSkillP.length) {
-                this.rankPlayers(playerData, 'doublePoints');
-                this.rankPlayers(playerData, 'singlesPoints');
-                this.setState({ playerData });
-              }
-            }).catch(err => console.log(err));
-          });
-        }).catch(err => console.log(err));
-    }
-  }
-
-
-
-  rankPlayers(players, pointType) {
-    players.sort((a, b) => b[pointType] - a[pointType]);
-
-    let rank = 1;
-    if (pointType === 'doublePoints') {  // Special handling for doubles
-      for (let i = 0; i < players.length; i++) {
-        if (i > 0 && players[i][pointType] === players[i - 1][pointType]) {
-          players[i][`${pointType}Ranking`] = players[i - 1][`${pointType}Ranking`];
-        } else {
-          players[i][`${pointType}Ranking`] = Math.ceil((rank + 1) / 2); // "Halving" the rank conceptually
-        }
-        rank++;
-      }
-    } else {  // Standard ranking for singles
-      for (let i = 0; i < players.length; i++) {
-        if (i > 0 && players[i][pointType] === players[i - 1][pointType]) {
-          players[i][`${pointType}Ranking`] = players[i - 1][`${pointType}Ranking`];
-        } else {
-          players[i][`${pointType}Ranking`] = rank;
-        }
-        rank++;
-      }
-    }
-  }
-
-
-
-
-
-  compareSingles(a,b) {
-    if ( a.singlesPoints > b.singlesPoints ){
+  compareCPI(a, b) {
+    const cpiA = a?.playerCPIStats?.playerCPI || 0;
+    const cpiB = b?.playerCPIStats?.playerCPI || 0;
+    if (cpiA > cpiB) {
       return -1;
     }
-    if ( a.singlesPoints < b.singlesPoints ){
+    if (cpiA < cpiB) {
       return 1;
     }
     return 0;
   }
 
-  compareDoubles(a,b) {
-    if ( a.doublePoints > b.doublePoints ){
-      return -1;
-    }
-    if ( a.doublePoints < b.doublePoints ){
-      return 1;
-    }
-    return 0;
+  handleSearchChange = (event) => {
+    this.setState({ searchQuery: event.target.value });
   }
 
-  compareDiff(a,b) {
-    if ( a.playerPerformanceStats.diffPerRnd > b.playerPerformanceStats.diffPerRnd ){
-      return -1;
-    }
-    if ( a.playerPerformanceStats.diffPerRnd < b.playerPerformanceStats.diffPerRnd ){
-      return 1;
-    }
-    return 0;
-  }
-
-  handleRadioChange = (event) => {
-    this.setState({radioVal: event.target.value})
+  handleCheckboxChange = (playerId) => {
+    console.log(playerId);
+    this.setState(prevState => {
+      const updatedPlayerData = prevState.playerData.filter(player => player.playerPerformanceStats.playerID !== playerId);
+      const urlParams = new URLSearchParams(window.location.search);
+      const playersToRemove = new Set(urlParams.get('playersRemove')?.split(',').map(Number) || []);
+      playersToRemove.add(playerId);
+      urlParams.set('playersRemove', Array.from(playersToRemove).join(','));
+      const newUrl = `${window.location.pathname}?${urlParams.toString().replace(/%2C/g, ',')}`;
+      window.history.replaceState(null, '', newUrl);
+      return { playerData: updatedPlayerData };
+    });
   }
 
   subHeading(data) {
-    if (this.state.radioVal === 'ppr') {
-      return '(' + data.playerPerformanceStats.ptsPerRnd + ' PPR)';
-    }
-
-    if (this.state.radioVal === 'wins') {
-      return '(' + data.playerWinLossStats.winPct + '% Win)';
-    }
-
-    if (this.state.radioVal === 'diff') {
-      return '(' + data.playerPerformanceStats.diffPerRnd + ' Diff)';
-    }
+    const cpi = data?.playerCPIStats?.playerCPI || 'N/A';
+    const nameWithCPI = `(CPI: ${cpi})`;
+    return `${nameWithCPI}`;
   }
 
   render() {
+    const filteredPlayers = this.state.playerData.filter(data => 
+      data.playerPerformanceStats.playerFirstName.toLowerCase().includes(this.state.searchQuery.toLowerCase()) ||
+      data.playerPerformanceStats.playerLastName.toLowerCase().includes(this.state.searchQuery.toLowerCase())
+    );
 
-    if (this.state.playerData.length < 0) {
-      return;
-    }
-
-    var obj = this.state.playerData;
-    if (this.state.radioVal === 'singles') {
-      obj.sort(this.compareSingles);
-    }
-
-    if (this.state.radioVal === 'doubles') {
-      obj.sort(this.compareDoubles);
-    }
-
-/*    let playerMarkup = [];
-    for (let i = 0; i < this.state.playerData.length; i++) {
-
-    }*/
-    console.log(this.state.playerData);
-    const playerMarkup = this.state.playerData.map((data, index) =>
-      <Accordion>
+    const playerMarkup = filteredPlayers.map((data, i) =>
+      <Accordion key={data.playerPerformanceStats.playerID}>
         <AccordionSummary
-        expandIcon={<ExpandMoreIcon/>}
-        aria-controls="panel1a-content"
-        id="panel1a-header"
-          >
-          <Typography>
-            {this.state.radioVal === 'singles' ? data.singlesPointsRanking : data.doublePointsRanking}. <strong>{data.playerFirstName} {data.playerLastName}</strong>
-            <span> Doubles: {data.doublePoints} | Singles: {data.singlesPoints}</span>
-          </Typography>
+          expandIcon={<ExpandMoreIcon/>}
+          aria-controls={`panel${data.playerPerformanceStats.playerID}-content`}
+          id={`panel${data.playerPerformanceStats.playerID}-header`}
+        >
+          <FormControlLabel
+            control={<Checkbox onChange={() => this.handleCheckboxChange(data.playerPerformanceStats.playerID)} />}
+            label={<Typography>{i + 1}. {data.playerPerformanceStats.playerFirstName} {data.playerPerformanceStats.playerLastName} <span>{this.subHeading(data)}</span></Typography>}
+          />
         </AccordionSummary>
         <AccordionDetails>
           <Typography variant="h4" gutterBottom>
-            PERFORMANCE STATS
+            Player ACL Points Breakdown
           </Typography>
           <div className={'stat'}>
             <Typography>
-              PPR
+              Local Pts
             </Typography>
             <Typography variant="h6" gutterBottom>
+              {data.playerPerformanceStats.totalPts}
+            </Typography>
+          </div>
+          <div className={'stat'}>
+            <Typography>
+              Opponent Pts
+            </Typography>
+            <Typography variant="h6" gutterBottom>
+              {data.playerPerformanceStats.opponentPts}
+            </Typography>
+          </div>
+          <div className={'stat'}>
+            <Typography>
+              DPR
+            </Typography>
+            <Typography variant="h6" gutterBottom>
+              {data.playerPerformanceStats.DPR}
+            </Typography>
+          </div>
+          <div className={'stat'}>
+            <Typography>
+              Four Bag %
+            </Typography>
+            <Typography variant="h6" gutterBottom>
+              {data.playerPerformanceStats.fourBaggerPct}
+            </Typography>
+          </div>
+          <div className={'stat'}>
+            <Typography>
+              Bags In %
+            </Typography>
+            <Typography variant="h6" gutterBottom>
+              {data.playerPerformanceStats.BagsInPct}
+            </Typography>
+          </div>
+          <div className={'stat'}>
+            <Typography>
+              Bags On %
+            </Typography>
+            <Typography variant="h6" gutterBottom>
+              {data.playerPerformanceStats.BagsOnPct}
+            </Typography>
+          </div>
+          <div className={'stat'}>
+            <Typography>
+              Bags Off %
+            </Typography>
+            <Typography variant="h6" gutterBottom>
+              {data.playerPerformanceStats.BagsOffPct}
+            </Typography>
+          </div>
+          <div className={'stat'}>
+            <Typography>
+              Total Points
+            </Typography>
+            <Typography variant="h6" gutterBottom>
+              {data.playerPerformanceStats.totalPtsTotal}
             </Typography>
           </div>
 
         </AccordionDetails>
       </Accordion>
     );
-
     return (
       <div className="App">
 
@@ -234,23 +179,19 @@ class App extends Component {
                 <MenuIcon/>
               </IconButton>
               <Typography variant="h6" component="div" sx={{flexGrow: 1}}>
-                ACL Cornhole stats
+                ACL Open Rankings
               </Typography>
             </Toolbar>
           </AppBar>
 
-          <FormControl className={'SortPPR'}>
-            <RadioGroup
-              row
-              defaultValue="ppr"
-              aria-labelledby="demo-row-radio-buttons-group-label"
-              name="row-radio-buttons-group"
-              value={this.state.radioVal}
-              onChange={this.handleRadioChange}
-            >
-              <FormControlLabel value="singles" control={<Radio />} label="Singles" />
-              <FormControlLabel value="doubles" control={<Radio />} label="Doubles" />
-            </RadioGroup>
+          <FormControl className={'SearchBox'} sx={{ my: 2 }}> 
+            <TextField
+              id="search"
+              label="Search Players"
+              variant="outlined"
+              value={this.state.searchQuery}
+              onChange={this.handleSearchChange}
+            />
           </FormControl>
 
           {playerMarkup}
@@ -261,38 +202,180 @@ class App extends Component {
 }
 
 const players = [
-  '70632',
-  '118664',
-  '142869',
-  '66099',
-  '144225',
-  '46251',
-  '108127',
-  '117254',
-  '144776',
-  '130843',
-  '120964',
-  '60597',
-  '30964',
-  '142119',
-  '145970',
-  '5519',
-  '145602',
-  '130317',
-  '104679',
-  '142118',
-  '165630',
-  '161741',
-  '135333',
-  '171043',
-  '171407',
-  '162970',
-  '166212',
-  '170187',
-  '169437',
-  '52156',
-  '166323',
-  '109978'
+  137573,
+  104149,
+  138098,
+  3720,
+  190906,
+  137463,
+  148321,
+  27790,
+  69521,
+  138343,
+  22575,
+  144327,
+  8458,
+  100149,
+  142607,
+  29018,
+  170111,
+  183669,
+  55544,
+  139308,
+  56043,
+  67020,
+  107712,
+  136777,
+  14445,
+  101133,
+  8244,
+  15033,
+  104029,
+  27412,
+  130717,
+  158695,
+  27979,
+  9268,
+  119637,
+  124423,
+  54009,
+  116226,
+  112949,
+  105998,
+  9609,
+  170620,
+  112559,
+  8975,
+  27393,
+  44721,
+  155164,
+  129590,
+  3693,
+  8883,
+  10771,
+  102686,
+  176669,
+  52612,
+  13750,
+  2097,
+  146469,
+  118444,
+  10627,
+  43379,
+  5309,
+  10206,
+  145126,
+  51130,
+  176952,
+  101173,
+  62473,
+  21919,
+  139120,
+  100981,
+  100445,
+  129066,
+  144285,
+  114539,
+  12661,
+  27526,
+  135954,
+  124233,
+  31754,
+  23455,
+  130027,
+  155342,
+  3185,
+  101458,
+  137542,
+  20037,
+  24908,
+  5807,
+  136431,
+  60923,
+  161535,
+  29541,
+  27181,
+  69683,
+  221280,
+  8870,
+  167540,
+  61675,
+  128817,
+  128817,
+  122670,
+  154384,
+  169600,
+  122250,
+  141819,
+  165597,
+  29056,
+  40710,
+  29142,
+  104524,
+  101205,
+  139043,
+  100783,
+  13876,
+  105465,
+  22655,
+  114724,
+  125495,
+  139276,
+  49634,
+  171985,
+  101841,
+  130253,
+  177200,
+  156224,
+  158034,
+  127908,
+  114046,
+  130983,
+  168425,
+  181775,
+  2436,
+  161653,
+  123379,
+  109982,
+  116447,
+  9101,
+  52816,
+  151694,
+  106001,
+  19083,
+  177928,
+  162879,
+  18719,
+  103443,
+  154954,
+  116351,
+  200854,
+  103926,
+  140325,
+  36148,
+  144654,
+  119894,
+  108799,
+  29873,
+  3157,
+  212511,
+  26695,
+  132175,
+  107266,
+  137585,
+  9732,
+  10241,
+  123090,
+  109473,
+  130065,
+  24085,
+  45840,
+  132801,
+  43947,
+  22232,
+  5368,
+  101009,
+  58566
 ];
 
 export default App;
